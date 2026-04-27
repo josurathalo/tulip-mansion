@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Staff Dashboard - Tulip Mansion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">🌷</div>
+        <div>
+          <div class="sidebar-title">Tulip Mansion</div>
+          <div class="sidebar-subtitle">Staff</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-page="home"><span class="icon">🏠</span> Home</button>
+        <button class="nav-item" data-page="rooms"><span class="icon">🏨</span> Room Management</button>
+        <button class="nav-item" data-page="lease"><span class="icon">📝</span> Lease & Agreement</button>
+        <button class="nav-item" data-page="meter"><span class="icon">📊</span> Meter Recording</button>
+        <button class="nav-item" data-page="maint"><span class="icon">🔧</span> Maintenance</button>
+        <button class="nav-item" data-page="rates"><span class="icon">📋</span> Service Rate</button>
+        <button class="nav-item" data-page="bills"><span class="icon">💵</span> Payment & Bills</button>
+        <button class="nav-item" data-page="reports"><span class="icon">📈</span> Reports</button>
+        <button class="nav-item" data-page="settings"><span class="icon">⚙️</span> Settings</button>
+      </nav>
+      <button class="btn-logout" onclick="Auth.logout()">⏻ LOG OUT</button>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <h1 id="welcomeMsg">HELLO, STAFF</h1>
+        <input type="text" class="search-bar" placeholder="🔍 Type in to search...">
+        <div class="topbar-actions">
+          <button class="icon-btn">🔔</button>
+          <button class="icon-btn">⚙️</button>
+        </div>
+      </div>
+
+      <div class="content">
+        <!-- ========== HOME DASHBOARD ========== -->
+        <div id="page-home">
+          <div class="dashboard-grid">
+            <div class="dashboard-card">
+              <h3 style="margin-bottom:16px">อัตราสถานะห้อง</h3>
+              <div style="display:flex;gap:24px;align-items:center">
+                <svg id="donutChart" class="donut-chart" viewBox="0 0 100 100"></svg>
+                <div id="donutLegend"></div>
+              </div>
+            </div>
+            <div>
+              <div class="stat-card yellow" style="margin-bottom:12px">
+                <div class="stat-label">ค้างชำระ</div>
+                <div class="stat-value" id="statUnpaid">0</div>
+                <div style="color:#6b7280;font-size:12px">ห้อง</div>
+              </div>
+              <div class="stat-card green" style="margin-bottom:12px">
+                <div class="stat-label">ชำระแล้ว</div>
+                <div class="stat-value" id="statPaid">0</div>
+                <div style="color:#6b7280;font-size:12px">ห้อง</div>
+              </div>
+              <div class="stat-card red">
+                <div class="stat-label">รายการแจ้งซ่อม</div>
+                <div class="stat-value" id="statMaint">0</div>
+                <div style="color:#6b7280;font-size:12px">รายการ</div>
+              </div>
+            </div>
+          </div>
+          <div class="dashboard-card">
+            <h3 style="margin-bottom:16px">รายรับ - รายจ่าย ต่อเดือน</h3>
+            <svg id="revenueChart" viewBox="0 0 600 250" style="width:100%;height:250px"></svg>
+          </div>
+        </div>
+
+        <!-- ========== ROOM MANAGEMENT ========== -->
+        <div id="page-rooms" class="hidden">
+          <div class="stats-row">
+            <div class="stat-card blue">
+              <div class="stat-label">🏨 ห้องพักทั้งหมด</div>
+              <div class="stat-value" id="rmTotal">0</div>
+              <div style="color:#6b7280;font-size:12px">ห้อง</div>
+            </div>
+            <div class="stat-card green">
+              <div class="stat-label">✅ ห้องว่าง</div>
+              <div class="stat-value" id="rmAvail">0</div>
+              <div style="color:#6b7280;font-size:12px">ห้อง</div>
+            </div>
+            <div class="stat-card red">
+              <div class="stat-label">⏰ ค้างชำระ</div>
+              <div class="stat-value" id="rmUnpaid">0</div>
+              <div style="color:#6b7280;font-size:12px">ห้อง</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">รายการห้องพัก</h2>
+              <button class="btn btn-primary" onclick="openAddRoom()">+ เพิ่มห้อง</button>
+            </div>
+            <table>
+              <thead><tr><th>ห้อง</th><th>ผู้เช่า</th><th>ราคาห้องพัก</th><th>แจ้งออก</th><th>ค้างชำระ</th><th></th></tr></thead>
+              <tbody id="roomsTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ========== LEASE & AGREEMENT ========== -->
+        <div id="page-lease" class="hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">รายการสัญญาเช่า</h2>
+            </div>
+            <table>
+              <thead><tr><th>ห้อง</th><th>ผู้เช่า</th><th>วันเริ่ม</th><th>วันสิ้นสุด</th><th>ค่าเช่า</th><th>มัดจำ</th><th></th></tr></thead>
+              <tbody id="leaseTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ========== METER RECORDING ========== -->
+        <div id="page-meter" class="hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Previous Records</h2>
+              <button class="btn btn-primary" onclick="openCreateMeter()">+ New Meter Record</button>
+            </div>
+            <div class="meter-grid" id="meterGrid"></div>
+          </div>
+        </div>
+
+        <!-- ========== MAINTENANCE ========== -->
+        <div id="page-maint" class="hidden">
+          <div class="tabs">
+            <button class="tab active" id="tabPending" onclick="switchMaintTab('รอดำเนินการ')">🛎️ รอดำเนินการ</button>
+            <button class="tab green" id="tabDone" onclick="switchMaintTab('ดำเนินการเสร็จสิ้น')">✅ ดำเนินการเสร็จสิ้น</button>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:16px">รายการแจ้งซ่อม</h3>
+            <table>
+              <thead><tr><th>วันที่แจ้งซ่อม</th><th>วันที่นัดซ่อม</th><th>ห้อง</th><th>สถานะ</th><th>รายละเอียด</th><th></th></tr></thead>
+              <tbody id="maintTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ========== SERVICE RATES (separate page) ========== -->
+        <div id="page-rates" class="hidden">
+          <div class="card">
+            <h2 class="card-title" style="margin-bottom:20px">กำหนดอัตราค่าบริการ</h2>
+            <form id="rateForm" style="margin-bottom:24px">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>ชื่อค่าบริการ <span class="required">*</span></label>
+                  <input type="text" id="rateName" required>
+                </div>
+                <div class="form-group">
+                  <label>อัตราค่าบริการ (บาท) <span class="required">*</span></label>
+                  <input type="number" id="rateValue" step="0.01" min="0.01" required>
+                </div>
+              </div>
+              <label style="display:flex;align-items:center;gap:6px">
+                <input type="checkbox" id="rateMetered"> คำนวณตามมิเตอร์ (เช่น ค่าน้ำ ค่าไฟ)
+              </label>
+              <button type="submit" class="btn btn-primary" style="margin-top:8px">+ เพิ่ม</button>
+            </form>
+            <table>
+              <thead><tr><th>รายการ</th><th>คำนวณตาม</th><th>ราคา</th><th></th></tr></thead>
+              <tbody id="ratesTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ========== PAYMENT & BILLS ========== -->
+        <div id="page-bills" class="hidden">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+            <button class="btn" style="border-color:#f59e0b;color:#f59e0b;padding:20px" onclick="switchBillTab('create')">📜 ออกบิล</button>
+            <button class="btn" style="border-color:#a855f7;color:#a855f7;padding:20px" onclick="switchBillTab('pending')">🔔 รอตรวจสอบ <span id="pendingCount" style="background:#a855f7;color:white;border-radius:50%;padding:2px 8px;font-size:11px;margin-left:6px;display:none">0</span></button>
+            <button class="btn" style="border-color:#ef4444;color:#ef4444;padding:20px" onclick="switchBillTab('unpaid')">⏰ บิลค้างชำระ</button>
+            <button class="btn" style="border-color:#10b981;color:#10b981;padding:20px" onclick="switchBillTab('paid')">📃 บิลชำระแล้ว</button>
+          </div>
+
+          <!-- Pending verification -->
+          <div id="billsTab-pending" class="card hidden">
+            <h2 class="card-title">รอตรวจสอบการชำระเงิน</h2>
+            <p style="color:#6b7280;margin:8px 0 16px">บิลที่ผู้พักอาศัยส่งหลักฐานการชำระมาแล้ว รอ Staff ตรวจสอบและยืนยัน</p>
+            <table>
+              <thead><tr><th>เลขที่</th><th>วันส่ง</th><th>ห้อง</th><th>ยอดที่โอน</th><th>ช่องทาง</th><th></th></tr></thead>
+              <tbody id="pendingTable"></tbody>
+            </table>
+          </div>
+
+          <!-- Create Bill -->
+          <div id="billsTab-create" class="card hidden">
+            <div class="card-header">
+              <h2 class="card-title">สร้างใบแจ้งหนี้</h2>
+              <div>
+                <button class="btn btn-primary" onclick="openCreateBill('ทั่วไป')">+ บิลทั่วไป</button>
+                <button class="btn btn-primary" onclick="openBatchMonthly()">+ ออกบิลรายเดือน (Batch)</button>
+              </div>
+            </div>
+            <table>
+              <thead><tr><th>เลขที่</th><th>วันที่</th><th>สถานะ</th><th>ห้อง</th><th>ยอด</th><th>ประเภท</th><th></th></tr></thead>
+              <tbody id="allBillsTable"></tbody>
+            </table>
+          </div>
+
+          <!-- Unpaid -->
+          <div id="billsTab-unpaid" class="card hidden">
+            <h2 class="card-title">บิลค้างชำระ</h2>
+            <table>
+              <thead><tr><th>เลขที่</th><th>วันที่</th><th>ห้อง</th><th>ยอดเงิน</th><th></th></tr></thead>
+              <tbody id="unpaidTable"></tbody>
+            </table>
+          </div>
+
+          <!-- Paid -->
+          <div id="billsTab-paid" class="card hidden">
+            <h2 class="card-title">บิลชำระแล้ว</h2>
+            <table>
+              <thead><tr><th>เลขที่</th><th>วันที่</th><th>ห้อง</th><th>ยอดเงิน</th><th></th></tr></thead>
+              <tbody id="paidTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ========== REPORTS ========== -->
+        <div id="page-reports" class="hidden">
+          <div id="reportsHome">
+            <h2 class="card-title" style="margin-bottom:20px">รายงาน</h2>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+              <button class="btn" style="padding:40px;flex-direction:column;font-size:16px;font-weight:600" onclick="openReport('receipts')">📃<br>ใบเสร็จรับเงิน</button>
+              <button class="btn" style="padding:40px;flex-direction:column;font-size:16px;font-weight:600" onclick="openReport('unpaid')">⏰<br>ใบแจ้งหนี้<br>ค้างชำระ</button>
+              <button class="btn" style="padding:40px;flex-direction:column;font-size:16px;font-weight:600" onclick="openReport('monthly')">📅<br>ใบแจ้งหนี้<br>รายเดือน</button>
+              <button class="btn" style="padding:40px;flex-direction:column;font-size:16px;font-weight:600" onclick="openReport('residents')">👥<br>ผู้พักอาศัย<br>ปัจจุบัน</button>
+              <button class="btn" style="padding:40px;flex-direction:column;font-size:16px;font-weight:600" onclick="openReport('meters')">💧⚡<br>มิเตอร์ค่าน้ำ<br>และค่าไฟฟ้า</button>
+            </div>
+          </div>
+          <div id="reportsDetail" class="hidden">
+            <button class="btn" onclick="document.getElementById('reportsHome').classList.remove('hidden');document.getElementById('reportsDetail').classList.add('hidden')">‹ ย้อนกลับ</button>
+            <div class="card" style="margin-top:12px">
+              <div class="card-header">
+                <h2 class="card-title" id="reportTitle"></h2>
+                <div>
+                  <button class="btn" onclick="window.print()">🖨️ พิมพ์</button>
+                  <button class="btn btn-success" id="exportExcelBtn">⬇ Excel</button>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group"><label>วันที่เริ่ม</label><input type="date" id="reportFrom"></div>
+                <div class="form-group"><label>วันที่สิ้นสุด</label><input type="date" id="reportTo"></div>
+                <div class="form-group" style="display:flex;align-items:flex-end"><button class="btn btn-primary" onclick="loadReport()">🔍 ค้นหา</button></div>
+              </div>
+              <div id="reportSummary" style="margin:12px 0;padding:14px;background:#f9fafb;border-radius:8px"></div>
+              <div id="reportContent"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="page-settings" class="hidden">
+          <div class="card">
+            <h2 class="card-title">การตั้งค่า</h2>
+            <p style="color:#6b7280;margin:12px 0">ระบบจัดการหอพัก Tulip Mansion v1.0</p>
+            <div id="userInfoBox"></div>
+
+            <h3 style="margin-top:24px">📢 จัดการประชาสัมพันธ์</h3>
+            <form id="annForm" style="margin-top:12px">
+              <textarea id="annMsg" rows="2" placeholder="พิมพ์ข้อความประชาสัมพันธ์..." required style="width:100%"></textarea>
+              <button type="submit" class="btn btn-primary" style="margin-top:8px">+ เพิ่มประชาสัมพันธ์</button>
+            </form>
+            <div id="annList" style="margin-top:12px"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/staff.js"></script>
+</body>
+</html>

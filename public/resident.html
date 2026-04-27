@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Resident - Tulip Mansion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">🌷</div>
+        <div>
+          <div class="sidebar-title">Tulip Mansion</div>
+          <div class="sidebar-subtitle">Resident</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-page="home"><span class="icon">🏠</span> Home</button>
+        <button class="nav-item" data-page="maint"><span class="icon">🔧</span> Maintenance</button>
+        <button class="nav-item" data-page="bills"><span class="icon">💵</span> Payment & Bills</button>
+        <button class="nav-item" data-page="settings"><span class="icon">⚙️</span> Settings</button>
+      </nav>
+      <button class="btn-logout" onclick="Auth.logout()">⏻ LOG OUT</button>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <h1 id="welcomeMsg">HELLO</h1>
+        <input type="text" class="search-bar" placeholder="🔍 Type in to search...">
+        <div class="topbar-actions">
+          <button class="icon-btn">🔔</button>
+          <button class="icon-btn">⚙️</button>
+        </div>
+      </div>
+
+      <div class="content">
+        <!-- HOME -->
+        <div id="page-home">
+          <div class="hero-banner">หอพักทิวลิปแมนชั่น</div>
+          <div class="dashboard-grid">
+            <div class="unpaid-card">
+              <div class="label">ยอดค้างชำระ</div>
+              <div class="amount" id="unpaidAmount">0</div>
+              <div class="label">บาท</div>
+            </div>
+            <div class="dashboard-card">
+              <h3 style="margin-bottom:12px">📢 ประชาสัมพันธ์</h3>
+              <div id="announcements"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MAINTENANCE -->
+        <div id="page-maint" class="hidden">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">ประวัติการแจ้งซ่อม</h2>
+              <button class="btn btn-primary" onclick="openMaintForm()">🔧 แจ้งซ่อม</button>
+            </div>
+            <table>
+              <thead><tr><th>วันที่แจ้งซ่อม</th><th>วันที่นัดซ่อม</th><th>สถานะ</th><th>รายละเอียด</th><th></th></tr></thead>
+              <tbody id="maintTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- BILLS -->
+        <div id="page-bills" class="hidden">
+          <div class="card">
+            <h2 class="card-title">ประวัติการชำระ</h2>
+            <table>
+              <thead><tr><th>เลขที่ใบแจ้งหนี้</th><th>วันที่</th><th>สถานะ</th><th>ยอดเงิน</th><th></th></tr></thead>
+              <tbody id="billsTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="page-settings" class="hidden">
+          <div class="card">
+            <h2 class="card-title">ข้อมูลบัญชี</h2>
+            <div id="userInfoBox" style="margin-top:16px"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    const user = Auth.requireAuth(['Resident']);
+    if (user) document.getElementById('welcomeMsg').textContent = `HELLO, ${user.name.toUpperCase()}`;
+
+    document.querySelectorAll('.nav-item').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      document.querySelectorAll('[id^=page-]').forEach(p => p.classList.add('hidden'));
+      document.getElementById('page-' + b.dataset.page).classList.remove('hidden');
+      if (b.dataset.page === 'maint') loadMaint();
+      else if (b.dataset.page === 'bills') loadBills();
+      else if (b.dataset.page === 'settings') loadSettings();
+      else loadHome();
+    }));
+
+    function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    async function loadHome() {
+      try {
+        const data = await api('/api/resident/dashboard');
+        document.getElementById('unpaidAmount').textContent = fmt(data.unpaid_total);
+        document.getElementById('announcements').innerHTML = data.announcements.length
+          ? data.announcements.map(a => `<div style="padding:10px;background:#f9fafb;border-radius:8px;margin-bottom:8px">${escapeHtml(a.message)}</div>`).join('')
+          : '<div style="color:#9ca3af">ไม่มีประชาสัมพันธ์</div>';
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    async function loadMaint() {
+      try {
+        const items = await api('/api/maintenance');
+        const tbody = document.getElementById('maintTable');
+        if (items.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#9ca3af">ยังไม่มีรายการแจ้งซ่อม</td></tr>';
+          return;
+        }
+        tbody.innerHTML = items.map(m => `
+          <tr>
+            <td>${fmtDate(m.report_date)}</td>
+            <td>${fmtDate(m.appointment_date)}</td>
+            <td><span class="badge badge-${m.status === 'รอดำเนินการ' ? 'pending' : 'done'}">${m.status}</span></td>
+            <td>${escapeHtml(m.details)}</td>
+            <td>${m.status === 'รอดำเนินการ' ? `<button class="btn btn-sm" onclick="editMaint(${m.id})">แก้ไข</button>` : ''}</td>
+          </tr>
+        `).join('');
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    function openMaintForm(maint = null) {
+      const html = `
+        <div class="modal-header">
+          <h2 class="modal-title">${maint ? 'แก้ไข' : 'แจ้งซ่อม'}</h2>
+          <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <form id="maintForm" enctype="multipart/form-data">
+          <div class="form-row">
+            <div class="form-group">
+              <label>วันที่แจ้งซ่อม <span class="required">*</span></label>
+              <input type="date" id="reportDate" value="${maint ? maint.report_date : todayStr()}" required>
+            </div>
+            <div class="form-group">
+              <label>วันที่นัดซ่อม</label>
+              <input type="date" id="apptDate" value="${maint && maint.appointment_date ? maint.appointment_date : ''}">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>รายละเอียดการแจ้งซ่อม <span class="required">*</span></label>
+            <textarea id="details" rows="3" required>${maint ? escapeHtml(maint.details) : ''}</textarea>
+          </div>
+          <div class="form-group">
+            <label>รูปภาพ (ถ้ามี)</label>
+            <input type="file" id="image" accept="image/*">
+            ${maint && maint.image ? `<img src="${maint.image}" class="file-preview">` : ''}
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-cancel" onclick="closeModal()">⊘ Cancel</button>
+            <button type="submit" class="btn btn-success">💾 ${maint ? 'บันทึกการแก้ไข' : 'บันทึก'}</button>
+          </div>
+        </form>
+      `;
+      showModal(html);
+      document.getElementById('maintForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const fd = new FormData();
+        fd.append('report_date', document.getElementById('reportDate').value);
+        fd.append('appointment_date', document.getElementById('apptDate').value);
+        fd.append('details', document.getElementById('details').value);
+        const f = document.getElementById('image').files[0];
+        if (f) fd.append('image', f);
+        try {
+          await api(maint ? `/api/maintenance/${maint.id}` : '/api/maintenance', { method: maint ? 'PUT' : 'POST', body: fd });
+          toast('สำเร็จ');
+          closeModal(); loadMaint();
+        } catch (err) { toast(err.message, 'error'); }
+      });
+    }
+
+    async function editMaint(id) {
+      try { const m = await api(`/api/maintenance/${id}`); openMaintForm(m); }
+      catch (e) { toast(e.message, 'error'); }
+    }
+
+    async function loadBills() {
+      try {
+        const list = await api('/api/invoices');
+        const tbody = document.getElementById('billsTable');
+        if (list.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:#9ca3af">ไม่มีรายการ</td></tr>';
+          return;
+        }
+        const badgeFor = s => s === 'ชำระแล้ว' ? 'paid' : (s === 'รอตรวจสอบ' ? 'pending' : 'unpaid');
+        tbody.innerHTML = list.map(b => `
+          <tr>
+            <td>${b.invoice_no}</td>
+            <td>${fmtDate(b.invoice_date)}</td>
+            <td><span class="badge badge-${badgeFor(b.status)}">${b.status}</span></td>
+            <td>${fmt(b.total_amount)}</td>
+            <td><button class="btn btn-sm" onclick="viewBill(${b.id})">รายละเอียด</button></td>
+          </tr>
+        `).join('');
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    async function viewBill(id) {
+      try {
+        const inv = await api(`/api/invoices/${id}`);
+        const isUnpaid = inv.status === 'ค้างชำระ';
+        const isPending = inv.status === 'รอตรวจสอบ';
+        const isPaid = inv.status === 'ชำระแล้ว';
+        const badgeCls = isPaid ? 'paid' : (isPending ? 'pending' : 'unpaid');
+        const html = `
+          <div class="modal-header">
+            <h2 class="modal-title">${isPaid ? 'ใบเสร็จ' : 'ใบแจ้งหนี้'} ${inv.invoice_no}</h2>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+          </div>
+          <div class="invoice-paper">
+            <h2>${isPaid ? 'ใบเสร็จรับเงิน' : 'ใบแจ้งหนี้'} / Invoice</h2>
+            <div style="display:flex;justify-content:space-between;margin-bottom:16px">
+              <div>
+                <strong>หอพักทิวลิปแมนชั่น</strong><br>
+                Tulip Mansion Dormitory<br>
+                สำหรับ / Tax no.: xxxxxx
+              </div>
+              <div style="text-align:right">
+                เลขที่: ${inv.invoice_no}<br>
+                ห้อง: ${inv.room_no}<br>
+                วันที่: ${fmtDate(inv.invoice_date)}<br>
+                <span class="badge badge-${badgeCls}">${inv.status}</span>
+              </div>
+            </div>
+            <table style="margin-top:12px">
+              <thead><tr><th>#</th><th>รายการ</th><th>จำนวน</th><th>ราคา/หน่วย</th><th>ยอดรวม</th></tr></thead>
+              <tbody>
+                ${inv.items.map((it, i) => `<tr><td>${i+1}</td><td>${escapeHtml(it.service_name)}</td><td>${it.quantity}</td><td>${fmt(it.unit_price)}</td><td>${fmt(it.amount)}</td></tr>`).join('')}
+                <tr><td colspan="4" style="text-align:right"><strong>รวม</strong></td><td><strong>${fmt(inv.total_amount)}</strong></td></tr>
+              </tbody>
+            </table>
+            ${isPaid ? `
+              <div style="margin-top:16px;padding:14px;background:#d1fae5;border-radius:8px">
+                <strong>✅ ชำระเรียบร้อยแล้ว</strong><br>
+                จำนวน: ${fmt(inv.paid_amount)} บาท<br>
+                ช่องทาง: ${inv.payment_method || '-'}<br>
+                วันที่: ${fmtDate(inv.payment_date)}<br>
+                ${inv.payment_proof ? `<img src="${inv.payment_proof}" class="file-preview">` : ''}
+              </div>
+            ` : ''}
+            ${isPending ? `
+              <div style="margin-top:16px;padding:14px;background:#fef3c7;border-radius:8px;text-align:center">
+                <strong>⏳ รอ Staff ยืนยันการชำระเงิน</strong><br>
+                ยอดที่ส่ง: <strong>${fmt(inv.paid_amount)}</strong> บาท | วันที่ส่ง: ${fmtDate(inv.payment_date)}<br>
+                ${inv.payment_proof ? `<img src="${inv.payment_proof}" class="file-preview" style="margin-top:8px">` : ''}
+              </div>
+            ` : ''}
+          </div>
+          ${isUnpaid ? `
+            <div style="margin-top:16px;text-align:center">
+              <button class="btn btn-primary" style="padding:14px 28px;font-size:15px" onclick="openPayModal(${id}, ${inv.total_amount})">💳 ชำระเงินด้วย QR Code</button>
+            </div>
+          ` : ''}
+        `;
+        showModal(html, true);
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    function openPayModal(invoiceId, amount) {
+      closeModal();
+      showModal(`
+        <div class="modal-header">
+          <h2 class="modal-title">💳 ชำระเงินด้วย QR Code</h2>
+          <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+          <div style="text-align:center">
+            <h3 style="margin-bottom:12px">📱 สแกน QR เพื่อโอน</h3>
+            <div style="display:inline-block;border:1px solid #e5e7eb;border-radius:12px;padding:8px;background:white">
+              <img src="/img/qr-payment.jpg" id="qrImg" style="width:280px;height:auto;display:block" onerror="document.getElementById('qrImg').style.display='none';document.getElementById('qrFallback').style.display='block'">
+              <div id="qrFallback" style="display:none;width:280px;padding:80px 20px;background:#f9fafb;border-radius:8px;color:#6b7280">
+                <div style="font-size:40px">📷</div>
+                <strong>QR Code ยังไม่ถูกอัปโหลด</strong>
+                <small style="display:block;margin-top:8px">ติดต่อ Staff หรือวางไฟล์ที่<br><code>public/img/qr-payment.jpg</code></small>
+              </div>
+            </div>
+            <div style="margin-top:12px;padding:14px;background:#fef3c7;border-radius:8px;font-weight:700;font-size:18px">
+              💰 ยอดชำระ: ${fmt(amount)} บาท
+            </div>
+            <div style="margin-top:8px;font-size:12px;color:#6b7280">
+              Tulip Mansion · PromptPay<br>โปรดโอนตามยอดที่แสดงข้างบนให้ครบถ้วน
+            </div>
+          </div>
+          <div>
+            <h3 style="margin-bottom:12px">📤 ส่งหลักฐานการโอน</h3>
+            <form id="payResidentForm" enctype="multipart/form-data">
+              <div class="form-group">
+                <label>จำนวนเงินที่โอน <span class="required">*</span></label>
+                <input type="number" id="rPayAmount" value="${amount}" min="0.01" step="0.01" required>
+                <div class="help-text">ระบบจะเตือนหากยอดไม่ตรงกับใบแจ้งหนี้ (${fmt(amount)} บาท)</div>
+              </div>
+              <div class="form-group">
+                <label>วันที่โอน <span class="required">*</span></label>
+                <input type="date" id="rPayDate" value="${todayStr()}" max="${todayStr()}" required>
+              </div>
+              <div class="form-group">
+                <label>หลักฐานการโอน (สลิป) <span class="required">*</span></label>
+                <input type="file" id="rPayProof" accept="image/*" required onchange="previewSlip(this)">
+                <div class="help-text">เฉพาะไฟล์รูปภาพ (jpg, png) ขนาดไม่เกิน 5MB</div>
+                <img id="slipPreview" class="file-preview hidden">
+              </div>
+              <div style="padding:10px;background:#fee2e2;border-radius:8px;font-size:12px;color:#991b1b;margin-bottom:8px">
+                ⚠️ หลังส่งหลักฐานแล้ว ต้องรอ Staff ตรวจสอบและยืนยันก่อนสถานะจะเปลี่ยนเป็น "ชำระแล้ว"
+              </div>
+              <button type="submit" class="btn btn-success" style="width:100%;padding:12px;font-size:15px">💾 ส่งหลักฐานการโอน</button>
+            </form>
+          </div>
+        </div>
+      `, true);
+
+      window.previewSlip = (input) => {
+        const f = input.files[0];
+        if (!f) return;
+        const url = URL.createObjectURL(f);
+        const img = document.getElementById('slipPreview');
+        img.src = url;
+        img.classList.remove('hidden');
+      };
+
+      document.getElementById('payResidentForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        const amt = +document.getElementById('rPayAmount').value;
+        if (Math.abs(amt - amount) > 0.01) {
+          if (!confirm(`ยอดที่โอน (${fmt(amt)}) ไม่ตรงกับใบแจ้งหนี้ (${fmt(amount)})\nต้องการส่งหลักฐานต่อหรือไม่?`)) return;
+        }
+        const fd = new FormData();
+        fd.append('paid_amount', amt);
+        fd.append('payment_method', 'โอนผ่านบัญชี');
+        fd.append('payment_date', document.getElementById('rPayDate').value);
+        const f = document.getElementById('rPayProof').files[0];
+        if (f) fd.append('payment_proof', f);
+        try {
+          await api(`/api/invoices/${invoiceId}/submit-payment`, { method: 'POST', body: fd });
+          toast('ส่งหลักฐานสำเร็จ ✅ รอ Staff ตรวจสอบ');
+          closeModal();
+          loadBills();
+          loadHome();
+        } catch (err) { toast(err.message, 'error'); }
+      });
+    }
+
+    function loadSettings() {
+      const u = Auth.getUser();
+      document.getElementById('userInfoBox').innerHTML = `
+        <div class="form-group"><label>ชื่อ-นามสกุล</label><div style="padding:9px 12px;background:#f9fafb;border-radius:8px">${escapeHtml(u.name)}</div></div>
+        <div class="form-group"><label>Username</label><div style="padding:9px 12px;background:#f9fafb;border-radius:8px">${escapeHtml(u.username)}</div></div>
+        <div class="form-group"><label>เลขห้อง</label><div style="padding:9px 12px;background:#f9fafb;border-radius:8px">${u.room_no || '-'}</div></div>
+      `;
+    }
+
+    loadHome();
+  </script>
+</body>
+</html>

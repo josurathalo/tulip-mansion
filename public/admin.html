@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard - Tulip Mansion</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">🌷</div>
+        <div>
+          <div class="sidebar-title">Dashboard</div>
+          <div class="sidebar-subtitle">Admin</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-page="users"><span class="icon">👥</span> User Management</button>
+        <button class="nav-item" data-page="settings"><span class="icon">⚙️</span> Settings</button>
+      </nav>
+      <button class="btn-logout" onclick="Auth.logout()">⏻ LOG OUT</button>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="topbar">
+        <h1 id="welcomeMsg">HELLO, ADMIN</h1>
+        <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Type in to search...">
+        <div class="topbar-actions">
+          <button class="icon-btn" title="Notifications">🔔</button>
+          <button class="icon-btn" title="Settings">⚙️</button>
+          <button class="btn-add" onclick="openAddUser()">＋ เพิ่ม</button>
+        </div>
+      </div>
+
+      <div class="content">
+        <!-- USERS PAGE -->
+        <div id="page-users">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Users Data</h2>
+              <div class="filters">
+                <select id="filterType">
+                  <option value="all">All Type</option>
+                  <option value="Admin">Admin</option>
+                  <option value="Staff">Staff</option>
+                  <option value="Resident">Resident</option>
+                </select>
+                <select id="filterStatus">
+                  <option value="all">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+                <select id="filterSort">
+                  <option value="recent">Most Recent</option>
+                  <option value="oldest">Oldest</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="overflow-x:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Room No.</th>
+                    <th>Status</th>
+                    <th>User Type</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="usersTable"></tbody>
+              </table>
+            </div>
+
+            <div class="pagination">
+              <button class="btn btn-sm" id="prevPage">‹ Previous</button>
+              <div class="pagination-pages" id="pagePages"></div>
+              <button class="btn btn-sm" id="nextPage">Next ›</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SETTINGS PAGE -->
+        <div id="page-settings" class="hidden">
+          <div class="card">
+            <h2 class="card-title">การตั้งค่า</h2>
+            <p style="color:#6b7280;margin-top:8px">ตั้งค่าระบบและบัญชีผู้ดูแล</p>
+            <div style="margin-top:20px">
+              <div style="padding:16px;background:#f9fafb;border-radius:10px;margin-bottom:12px">
+                <strong>เกี่ยวกับระบบ:</strong> Tulip Mansion Management System v1.0<br>
+                <strong>ผู้ใช้งานปัจจุบัน:</strong> <span id="currentUserInfo"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    const user = Auth.requireAuth(['Admin']);
+    if (user) {
+      document.getElementById('welcomeMsg').textContent = `HELLO, ${user.name.toUpperCase()}`;
+      document.getElementById('currentUserInfo').textContent = `${user.name} (${user.username})`;
+    }
+
+    let allUsers = [];
+    let currentPage = 1;
+    const pageSize = 10;
+
+    // Tab navigation
+    document.querySelectorAll('.nav-item').forEach(b => b.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      document.querySelectorAll('[id^=page-]').forEach(p => p.classList.add('hidden'));
+      document.getElementById('page-' + b.dataset.page).classList.remove('hidden');
+    }));
+
+    // Load users
+    async function loadUsers() {
+      const params = new URLSearchParams({
+        search: document.getElementById('searchInput').value,
+        type: document.getElementById('filterType').value,
+        status: document.getElementById('filterStatus').value,
+        sort: document.getElementById('filterSort').value
+      });
+      try {
+        allUsers = await api('/api/users?' + params);
+        renderUsers();
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    function renderUsers() {
+      const tbody = document.getElementById('usersTable');
+      const totalPages = Math.max(1, Math.ceil(allUsers.length / pageSize));
+      if (currentPage > totalPages) currentPage = totalPages;
+      const start = (currentPage - 1) * pageSize;
+      const items = allUsers.slice(start, start + pageSize);
+
+      if (items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:40px">ไม่พบข้อมูล</td></tr>';
+      } else {
+        tbody.innerHTML = items.map(u => `
+          <tr>
+            <td>${escapeHtml(u.name)}</td>
+            <td>${escapeHtml(u.username)}</td>
+            <td>${u.room_no || '-'}</td>
+            <td>
+              <select class="status-select ${u.status === 'Active' ? 'active' : 'inactive'}"
+                      onchange="quickUpdateStatus(${u.id}, this.value)">
+                <option value="Active" ${u.status === 'Active' ? 'selected' : ''}>Active</option>
+                <option value="Inactive" ${u.status === 'Inactive' ? 'selected' : ''}>Inactive</option>
+              </select>
+            </td>
+            <td><span class="badge badge-${u.user_type.toLowerCase()}">${u.user_type}</span></td>
+            <td>
+              <button class="btn btn-sm" onclick="viewUser(${u.id})">👁</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">🗑</button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      // Pagination
+      const pagesEl = document.getElementById('pagePages');
+      let html = '';
+      for (let i = 1; i <= totalPages; i++) {
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+      }
+      pagesEl.innerHTML = html;
+    }
+
+    function goPage(p) { currentPage = p; renderUsers(); }
+    document.getElementById('prevPage').onclick = () => { if (currentPage > 1) { currentPage--; renderUsers(); } };
+    document.getElementById('nextPage').onclick = () => {
+      if (currentPage < Math.ceil(allUsers.length / pageSize)) { currentPage++; renderUsers(); }
+    };
+
+    function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    async function quickUpdateStatus(id, status) {
+      const u = allUsers.find(x => x.id === id);
+      if (!u) return;
+      try {
+        await api(`/api/users/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ name: u.name, username: u.username, room_no: u.room_no, status, user_type: u.user_type })
+        });
+        toast('อัปเดตสถานะสำเร็จ');
+        u.status = status;
+        renderUsers();
+      } catch (e) { toast(e.message, 'error'); loadUsers(); }
+    }
+
+    async function deleteUser(id) {
+      if (!await confirmDialog('ลบบัญชีผู้ใช้นี้?')) return;
+      try {
+        await api(`/api/users/${id}`, { method: 'DELETE' });
+        toast('ลบสำเร็จ');
+        loadUsers();
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // Add User Modal
+    function openAddUser() {
+      const html = `
+        <div class="modal-header">
+          <h2 class="modal-title">Add New User Data</h2>
+          <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <form id="addUserForm">
+          <div class="form-group">
+            <label>Name <span class="required">*</span></label>
+            <input type="text" id="newName" required>
+          </div>
+          <div class="form-group">
+            <label>Username <span class="required">*</span></label>
+            <input type="text" id="newUsername" required>
+            <div class="help-text">User name is available — ห้ามว่างและไม่ซ้ำกับที่มีอยู่</div>
+          </div>
+          <div class="form-group">
+            <label>Password <span class="required">*</span></label>
+            <input type="password" id="newPassword" required>
+            <div class="help-text">ต้องมีพิมพ์ใหญ่ พิมพ์เล็ก ตัวเลข อย่างน้อย 8 ตัว</div>
+          </div>
+          <div class="form-group">
+            <label>Room No.</label>
+            <input type="text" id="newRoom" placeholder="เช่น 205">
+            <div class="help-text">รับเฉพาะตัวเลข (ถ้ามี)</div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Status <span class="required">*</span></label>
+              <select id="newStatus">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>User Type <span class="required">*</span></label>
+              <select id="newType">
+                <option value="Resident">Resident</option>
+                <option value="Staff">Staff</option>
+                <option value="Admin">Admin</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-cancel" onclick="closeModal()">⊘ Cancel</button>
+            <button type="submit" class="btn btn-success">💾 Save</button>
+          </div>
+        </form>
+      `;
+      showModal(html);
+      document.getElementById('addUserForm').addEventListener('submit', async e => {
+        e.preventDefault();
+        try {
+          await api('/api/users', {
+            method: 'POST',
+            body: JSON.stringify({
+              name: document.getElementById('newName').value.trim(),
+              username: document.getElementById('newUsername').value.trim(),
+              password: document.getElementById('newPassword').value,
+              room_no: document.getElementById('newRoom').value.trim() || null,
+              status: document.getElementById('newStatus').value,
+              user_type: document.getElementById('newType').value
+            })
+          });
+          toast('เพิ่มบัญชีสำเร็จ');
+          closeModal();
+          loadUsers();
+        } catch (err) { toast(err.message, 'error'); }
+      });
+    }
+
+    // View/Edit User
+    async function viewUser(id) {
+      try {
+        const u = await api(`/api/users/${id}`);
+        const html = `
+          <div class="modal-header">
+            <h2 class="modal-title">User Data</h2>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+          </div>
+          <div id="userView">
+            <div class="form-group"><label>Name</label><div style="padding:9px 12px;background:#f9fafb;border-radius:8px">${escapeHtml(u.name)}</div></div>
+            <div class="form-group"><label>Username</label><div style="padding:9px 12px;background:#f9fafb;border-radius:8px">${escapeHtml(u.username)}</div></div>
+            <div class="form-group"><label>Password</label><div style="padding:9px 12px;background:#f9fafb;border-radius:8px">**********</div></div>
+            <div class="form-group"><label>Room No.</label><div style="padding:9px 12px;background:#f9fafb;border-radius:8px">${u.room_no || '-'}</div></div>
+            <div class="form-row">
+              <div class="form-group"><label>Status</label><div><span class="badge badge-${u.status === 'Active' ? 'active' : 'inactive'}">${u.status}</span></div></div>
+              <div class="form-group"><label>User Type</label><div><span class="badge badge-${u.user_type.toLowerCase()}">${u.user_type}</span></div></div>
+            </div>
+            <div class="modal-actions">
+              <button class="btn btn-primary" onclick="editUser(${id})">📝 Edit</button>
+            </div>
+          </div>
+          <form id="editUserForm" class="hidden">
+            <div class="form-group"><label>Name</label><input type="text" id="eName" value="${escapeHtml(u.name)}" required></div>
+            <div class="form-group"><label>Username</label><input type="text" id="eUsername" value="${escapeHtml(u.username)}" required></div>
+            <div class="form-group"><label>Password (เว้นว่างถ้าไม่เปลี่ยน)</label><input type="password" id="ePassword" placeholder="**********"></div>
+            <div class="form-group"><label>Room No.</label><input type="text" id="eRoom" value="${u.room_no || ''}"></div>
+            <div class="form-row">
+              <div class="form-group"><label>Status</label>
+                <select id="eStatus"><option ${u.status === 'Active' ? 'selected' : ''}>Active</option><option ${u.status === 'Inactive' ? 'selected' : ''}>Inactive</option></select>
+              </div>
+              <div class="form-group"><label>User Type</label>
+                <select id="eType">
+                  <option value="Admin" ${u.user_type === 'Admin' ? 'selected' : ''}>Admin</option>
+                  <option value="Staff" ${u.user_type === 'Staff' ? 'selected' : ''}>Staff</option>
+                  <option value="Resident" ${u.user_type === 'Resident' ? 'selected' : ''}>Resident</option>
+                </select>
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn btn-cancel" onclick="closeModal()">⊘ Cancel</button>
+              <button type="submit" class="btn btn-success">💾 Save</button>
+            </div>
+          </form>
+        `;
+        showModal(html);
+        document.getElementById('editUserForm').addEventListener('submit', async e => {
+          e.preventDefault();
+          try {
+            const body = {
+              name: document.getElementById('eName').value.trim(),
+              username: document.getElementById('eUsername').value.trim(),
+              room_no: document.getElementById('eRoom').value.trim() || null,
+              status: document.getElementById('eStatus').value,
+              user_type: document.getElementById('eType').value
+            };
+            const pw = document.getElementById('ePassword').value;
+            if (pw) body.password = pw;
+            await api(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+            toast('อัปเดตสำเร็จ');
+            closeModal();
+            loadUsers();
+          } catch (err) { toast(err.message, 'error'); }
+        });
+      } catch (e) { toast(e.message, 'error'); }
+    }
+    function editUser(id) {
+      document.getElementById('userView').classList.add('hidden');
+      document.getElementById('editUserForm').classList.remove('hidden');
+    }
+
+    // Filter listeners
+    let searchTimer;
+    document.getElementById('searchInput').addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(loadUsers, 300);
+    });
+    ['filterType', 'filterStatus', 'filterSort'].forEach(id =>
+      document.getElementById(id).addEventListener('change', loadUsers)
+    );
+
+    loadUsers();
+  </script>
+</body>
+</html>

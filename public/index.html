@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tulip Mansion - เข้าสู่ระบบ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-page">
+  <div class="login-card">
+    <div class="logo">🌷</div>
+    <h1>Tulip Mansion</h1>
+    <p class="subtitle">ระบบจัดการหอพัก</p>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label>Username <span class="required">*</span></label>
+        <input type="text" id="username" required autofocus>
+      </div>
+      <div class="form-group">
+        <label>Password <span class="required">*</span></label>
+        <input type="password" id="password" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;font-size:15px">
+        เข้าสู่ระบบ
+      </button>
+    </form>
+
+    <div class="demo-accounts">
+      <h4>🔑 บัญชีทดสอบ:</h4>
+      <div>👑 Admin: <strong>admin / Admin1234</strong></div>
+      <div>👤 Staff: <strong>staff / Staff1234</strong></div>
+      <div>🏠 Resident: <strong>apirati205 / User1234</strong></div>
+    </div>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    // If already logged in, redirect
+    const u = Auth.getUser();
+    if (u && Auth.getToken()) {
+      if (u.user_type === 'Admin') location.href = '/admin';
+      else if (u.user_type === 'Staff') location.href = '/staff';
+      else location.href = '/resident';
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        Auth.setAuth(data.token, data.user);
+        toast('เข้าสู่ระบบสำเร็จ');
+        setTimeout(() => {
+          if (data.user.user_type === 'Admin') location.href = '/admin';
+          else if (data.user.user_type === 'Staff') location.href = '/staff';
+          else location.href = '/resident';
+        }, 500);
+      } catch (err) {
+        toast(err.message, 'error');
+      }
+    });
+  </script>
+</body>
+</html>
