@@ -27,7 +27,7 @@
 ```bash
 # 1. Clone repo
 git clone https://github.com/josurathalo/tulip-mansion.git
-cd tulip-mansion
+cd tulip-mansion-main
 
 # 2. ติดตั้ง dependencies
 npm install
