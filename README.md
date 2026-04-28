@@ -24,6 +24,27 @@
 
 ### ขั้นตอน
 
+================================
+วิธีรันโปรเจกต์ Tulip Mansion
+================================
+
+1. เปิด Command Prompt
+2. cd เข้าไปที่ folder tulip-mansion:
+   cd tulip-mansion
+3. รันคำสั่ง:
+   npm install
+   npm run init-db
+   npm start
+4. เปิด browser ที่ http://localhost:3000
+
+บัญชีทดสอบ:
+- Admin:    admin / Admin1234
+- Staff:    staff / Staff1234
+- Resident: apirati205 / User1234
+
+ดูรายละเอียดทั้งหมดในไฟล์ tulip-mansion/README.md
+และไฟล์ Tulip_Mansion_User_Manual.docx
+
 ```bash
 # 1. Clone repo
 git clone https://github.com/josurathalo/tulip-mansion.git
