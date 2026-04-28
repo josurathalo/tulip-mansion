@@ -1,8 +1,8 @@
-# 🌷 Tulip Mansion - Dormitory Management System
+# Tulip Mansion - Dormitory Management System
 
 ระบบจัดการหอพักครบวงจร แบบ Full-Stack Web Application พร้อมฐานข้อมูลจริง
 
-## ✨ ฟีเจอร์หลัก
+## ฟีเจอร์หลัก
 
 - 👥 **Admin Management** — จัดการผู้ใช้ 3 บทบาท (Admin / Staff / Resident) + Search/Filter/Pagination
 - 🏨 **Room Management** — จัดการห้องพัก + Real-time Status + กราฟวงกลม + กราฟรายรับ
@@ -17,7 +17,7 @@
 
 ---
 
-## 🚀 การติดตั้งและรัน
+## การติดตั้งและรัน
 
 ### ความต้องการ
 - **Node.js 22+** ([ดาวน์โหลด](https://nodejs.org/))
@@ -64,7 +64,7 @@ npm start
 
 ---
 
-## 🔑 บัญชีเริ่มต้น
+## บัญชีเริ่มต้น
 
 | Role | Username | Password |
 |------|----------|----------|
@@ -76,7 +76,7 @@ npm start
 
 ---
 
-## 💳 ตั้งค่า QR Code สำหรับการชำระเงิน
+## ตั้งค่า QR Code สำหรับการชำระเงิน
 
 วาง QR Code ของธนาคาร/PromptPay ที่ไฟล์:
 
@@ -88,7 +88,7 @@ public/img/qr-payment.jpg
 
 ---
 
-## 🛠 Tech Stack
+## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -102,7 +102,7 @@ public/img/qr-payment.jpg
 
 ---
 
-## 📁 โครงสร้างไฟล์
+## โครงสร้างไฟล์
 
 ```
 tulip-mansion/
@@ -128,7 +128,7 @@ tulip-mansion/
 
 ---
 
-## 🔒 Data Validation Constraints (DVC)
+## Data Validation Constraints (DVC)
 
 ระบบมี Validation ครบทุกจุด:
 - Username/Room number ไม่ซ้ำ
@@ -143,7 +143,7 @@ tulip-mansion/
 
 ---
 
-## 📝 หมายเหตุ
+## หมายเหตุ
 
 - ฐานข้อมูลถูกสร้างเป็นไฟล์ `tulip_mansion.db` (gitignored)
 - รูปอัปโหลดเก็บใน `uploads/` (gitignored)
@@ -152,6 +152,6 @@ tulip-mansion/
 
 ---
 
-## 📄 License
+## License
 
 MIT License - ใช้ได้ฟรี
