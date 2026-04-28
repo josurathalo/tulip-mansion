@@ -26,7 +26,7 @@
 
 ```bash
 # 1. Clone repo
-git clone https://github.com/YOUR_USERNAME/tulip-mansion.git
+git clone https://github.com/josurathalo/tulip-mansion.git
 cd tulip-mansion
 
 # 2. ติดตั้ง dependencies
